@@ -12,5 +12,4 @@ $ qpdf --decrypt ./path/to/<origin-form-name> ./path/to/<decrypt-form-name>
 
 // Run with library's name
 $ npm run pdffiller
-
 ```
