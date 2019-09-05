@@ -1,0 +1,11 @@
+{
+  "name": "fill-pdf-form",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "pdffiller": "^0.0.11"
+  },
+  "scripts": {
+    "pdffiller": "node ./scripts/pdffiller.js"
+  }
+}
