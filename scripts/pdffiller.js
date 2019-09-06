@@ -1,34 +1,39 @@
 var pdfFiller = require("pdffiller");
 var fs = require("fs");
 
-var formName = "i-130a";
+// var formName = "i-130a";
+var formArray = ["i-130a", "i-485_1", "i-485_2", "i-693", "i-864", "i-864a"];
 var sourcePath = "src/decrypt-forms/";
 var destPath = "src/result/";
 var fdfPath = "src/fdfs/";
 
-var sourcePDF = `${sourcePath}${formName}.pdf`;
-var destinationPDF = `${destPath}${formName}.pdf`;
-
 // Override the default field name regex. Default: /FieldName: ([^\n]*)/
 var nameRegex = null;
 
-pdfFiller.generateFDFTemplate(sourcePDF, nameRegex, function(err, fdfData) {
-  if (err) throw err;
-  exportFile(`${fdfPath}${formName}-origin.json`, fdfData);
+formArray.forEach(formName => generateSources(formName));
 
-  var jsonContent = parser(fdfData);
-  exportFile(`${fdfPath}${formName}.json`, jsonContent);
-});
+function generateSources(formName) {
+  var sourcePDF = `${sourcePath}${formName}.pdf`;
+  var destinationPDF = `${destPath}${formName}.pdf`;
 
-function exportFile(path, data) {
-  var jsonData = typeof data === "string" ? JSON.parse(data) : data;
-  var result = JSON.stringify(jsonData, null, "\t");
-  fs.writeFile(path, result, "utf8", function(err) {
-    if (err) {
-      console.log("An error occured while writing JSON Object to File.");
-      return console.log(err);
-    }
+  pdfFiller.generateFDFTemplate(sourcePDF, nameRegex, function(err, fdfData) {
+    if (err) throw err;
+    exportFile(`${fdfPath}${formName}.json`, fdfData);
+
+    var jsonContent = parser(fdfData);
+    exportFile(`${destPath}${formName}.json`, jsonContent);
   });
+
+  function exportFile(path, data) {
+    var jsonData = typeof data === "string" ? JSON.parse(data) : data;
+    var result = JSON.stringify(jsonData, null, "\t");
+    fs.writeFile(path, result, "utf8", function(err) {
+      if (err) {
+        console.log("An error occured while writing JSON Object to File.");
+        return console.log(err);
+      }
+    });
+  }
 }
 
 function parser(fdfData) {
