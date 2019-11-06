@@ -1,39 +1,78 @@
 var pdfFiller = require("pdffiller");
 var fs = require("fs");
+// var qpdf = require("node-qpdf");
 
-// var formName = "i-130a";
-var formArray = ["i-130a", "i-485_1", "i-485_2", "i-693", "i-864", "i-864a"];
+// var originSrcPath =
+//   "/Users/clarekang/repositories/lawfully/fill-pdf-form/src/origin-forms/";
 var sourcePath = "src/decrypt-forms/";
 var destPath = "src/result/";
 var fdfPath = "src/fdfs/";
+var dataPath = "src/form-datas/";
 
-// Override the default field name regex. Default: /FieldName: ([^\n]*)/
-var nameRegex = null;
+// // Get list of PDF files and decrypt
+// fs.readdirSync(originSrcPath).forEach(file => {
+//   var localFilePath = `${originSrcPath}${file}`;
+//   qpdf.decrypt(localFilePath, "", `${sourcePath}${file}`);
+// });
 
-formArray.forEach(formName => generateSources(formName));
+// Get list of decrypt PDF form files
+var formArray = fs.readdirSync(sourcePath);
 
-function generateSources(formName) {
-  var sourcePDF = `${sourcePath}${formName}.pdf`;
-  var destinationPDF = `${destPath}${formName}.pdf`;
+generateSources("i-130.pdf");
 
-  pdfFiller.generateFDFTemplate(sourcePDF, nameRegex, function(err, fdfData) {
+// formArray.forEach(fileName => generateSources(fileName));
+
+async function generateSources(fileName) {
+  var [formName] = fileName.split(".");
+  var sourcePDF = `${sourcePath}${fileName}`;
+  var dataJSON = `${dataPath}${formName}.json`;
+  var destinationPDF = `${destPath}${fileName}`;
+
+  // Override the default field name regex. Default: /FieldName: ([^\n]*)/
+  var nameRegex = null;
+
+  await pdfFiller.generateFieldJson(sourcePDF, nameRegex, function(
+    err,
+    fieldData,
+  ) {
     if (err) throw err;
-    exportFile(`${fdfPath}${formName}.json`, fdfData);
-
-    var jsonContent = parser(fdfData);
-    exportFile(`${destPath}${formName}.json`, jsonContent);
+    // export fdf file
+    exportFile(dataJSON, fieldData);
   });
 
-  function exportFile(path, data) {
-    var jsonData = typeof data === "string" ? JSON.parse(data) : data;
-    var result = JSON.stringify(jsonData, null, "\t");
-    fs.writeFile(path, result, "utf8", function(err) {
-      if (err) {
-        console.log("An error occured while writing JSON Object to File.");
-        return console.log(err);
-      }
-    });
-  }
+  // Get each FDF template from PDF
+  await pdfFiller.generateFDFTemplate(sourcePDF, nameRegex, function(
+    err,
+    fdfData,
+  ) {
+    if (err) throw err;
+    // export fdf file
+    exportFile(`${fdfPath}${formName}.json`, fdfData);
+
+    // // export parsed json
+    // var jsonContent = parser(fdfData);
+    // exportFile(`${destPath}${formName}.json`, jsonContent);
+  });
+
+  // fill out form
+  var fieldData = JSON.parse(fs.readFileSync(dataJSON));
+  var data = pdfFiller.convFieldJson2FDF(fieldData);
+
+  pdfFiller.fillForm(sourcePDF, destinationPDF, data, function(err) {
+    if (err) throw err;
+    console.log("In callback (we're done).");
+  });
+}
+
+function exportFile(path, data) {
+  var jsonData = typeof data === "string" ? JSON.parse(data) : data;
+  var result = JSON.stringify(jsonData, null, "\t");
+  fs.writeFile(path, result, "utf8", function(err) {
+    if (err) {
+      console.log("An error occured while writing JSON Object to File.");
+      return console.log(err);
+    }
+  });
 }
 
 function parser(fdfData) {
@@ -64,7 +103,7 @@ function parser(fdfData) {
   });
 
   Object.keys(data).forEach(key => {
-    var values = JSON.unflatten(data[key]);
+    var values = unflatten(data[key]);
     var unflattenString = JSON.stringify(values)
       .replace(/null,/g, "")
       .replace(/\[""\]/g, '""');
@@ -75,8 +114,7 @@ function parser(fdfData) {
   return data;
 }
 
-JSON.unflatten = function(data) {
-  "use strict";
+function unflatten(data) {
   if (Object(data) !== data || Array.isArray(data)) return data;
   var regex = /\.?([^.\[\]]+)|\[(\d+)\]/g,
     resultholder = {};
@@ -91,4 +129,4 @@ JSON.unflatten = function(data) {
     cur[prop] = data[p];
   }
   return resultholder[""] || resultholder;
-};
+}

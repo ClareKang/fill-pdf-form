@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "form-pdf2json": "^0.1.4",
+    "node-qpdf": "^1.0.3",
     "pdffiller": "^0.0.11"
   },
   "scripts": {
-    "pdffiller": "node ./scripts/pdffiller.js"
+    "pdffiller": "node ./scripts/pdffiller.js",
+    "form-pdf2json": "node ./scripts/form-pdf2json.js"
   }
 }
